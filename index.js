@@ -37,18 +37,26 @@ function saveUsers(data) {
 // START
 bot.onText(/\/start/, async (msg) => {
 
-  bot.sendMessage(
+  await bot.sendMessage(
     msg.chat.id,
     'iyaa, kirim pesannya ya, nanti dibales secepatnya.'
   )
 
 })
 
-// SEMUA PESAN USER
+// SEMUA PESAN
 bot.on('message', async (msg) => {
 
-  // PRIVATE CHAT
-  if (msg.chat.type === 'private') {
+  const users =
+  loadUsers()
+
+  // =========================
+  // PRIVATE → GROUP
+  // =========================
+
+  if (
+    msg.chat.type === 'private'
+  ) {
 
     // skip command
     if (
@@ -56,20 +64,23 @@ bot.on('message', async (msg) => {
       msg.text.startsWith('/')
     ) return
 
-    const users = loadUsers()
-
     let user =
-      users[msg.from.id]
+    users[msg.from.id]
 
     let topicId
 
-    // bikin topic baru
+    // BUAT TOPIC BARU
     if (!user) {
+
+      const topicName =
+`${msg.from.first_name} | @${
+msg.from.username || 'no_username'
+}`
 
       const topic =
       await bot.createForumTopic(
         GROUP_ID,
-        msg.from.first_name
+        topicName
       )
 
       topicId =
@@ -87,25 +98,28 @@ bot.on('message', async (msg) => {
         msg.from.first_name,
 
         username:
-        msg.from.username || '-'
+        msg.from.username || '-',
+
+        last_msg_id:
+        null
 
       }
 
       saveUsers(users)
 
-      // info user
+      // INFO USER
       await bot.sendMessage(
         GROUP_ID,
 
-`🫂 INFO USER
+`👤 INFORMASI USER
 
-Nama User:
+Nama:
 ${msg.from.first_name}
 
 Username:
 @${msg.from.username || '-'}
 
-ID TELE:
+ID:
 ${msg.from.id}`,
 
 {
@@ -121,7 +135,52 @@ ${msg.from.id}`,
       topicId =
       user.topic_id
 
+      // RENAME TOPIC
+      const newTopicName =
+`${msg.from.first_name} | @${
+msg.from.username || 'no_username'
+}`
+
+      const oldTopicName =
+`${user.fullname} | @${
+user.username || 'no_username'
+}`
+
+      if (
+        newTopicName
+        !==
+        oldTopicName
+      ) {
+
+        await bot.editForumTopic(
+          GROUP_ID,
+          topicId,
+          {
+            name:
+            newTopicName
+          }
+        )
+
+        users[msg.from.id]
+        .fullname =
+        msg.from.first_name
+
+        users[msg.from.id]
+        .username =
+        msg.from.username || '-'
+
+        saveUsers(users)
+
+      }
+
     }
+
+    // SIMPAN LAST MESSAGE
+    users[msg.from.id]
+    .last_msg_id =
+    msg.message_id
+
+    saveUsers(users)
 
     // TEXT
     if (msg.text) {
@@ -190,6 +249,7 @@ ${msg.from.id}`,
 
     // VOICE
     else if (msg.voice) {
+
       await bot.sendVoice(
         GROUP_ID,
         msg.voice.file_id,
@@ -201,22 +261,30 @@ ${msg.from.id}`,
 
     }
 
-  // GROUP TOPIC → USER
+  }
+
+  // =========================
+  // GROUP → USER
+  // =========================
+
   else if (
     msg.chat.type === 'supergroup'
   ) {
+
+    if (msg.from.is_bot)
+    return
 
     if (
       !msg.message_thread_id
     ) return
 
-    const users = loadUsers()
-
-    let foundUser = null
+    let foundUser =
+    null
 
     for (const id in users) {
 
       if (
+
         String(
           users[id].topic_id
         )
@@ -233,25 +301,20 @@ ${msg.from.id}`,
         users[id]
 
       }
-         
-       // VOICE
-      else if (msg.voice) {
-        await bot.sendVoice(
-         userId,
-         msg.voice.file_id
-       )
-      }
 
     }
 
-    if (!foundUser) return
+    if (!foundUser)
+    return
 
     const userId =
     foundUser.user_id
 
-    // jangan baca bot
-    if (msg.from.is_bot)
-    return
+    // AUTO TYPING
+    await bot.sendChatAction(
+      userId,
+      'typing'
+    )
 
     // TEXT
     if (
@@ -259,14 +322,13 @@ ${msg.from.id}`,
       !msg.text.startsWith('/')
     ) {
 
-      await bot.sendChatAction(
-        userId,
-        'typing'
-      )
-
       await bot.sendMessage(
         userId,
-        msg.text
+        msg.text,
+        {
+          reply_to_message_id:
+          foundUser.last_msg_id
+        }
       )
 
     }
@@ -274,13 +336,13 @@ ${msg.from.id}`,
     // PHOTO
     else if (msg.photo) {
 
+      await bot.sendChatAction(
+        userId,
+        'upload_photo'
+      )
+
       const photo =
       msg.photo.pop()
-
-      await bot.sendChatAction(
-       userId,
-       'upload_photo'
-      )
 
       await bot.sendPhoto(
         userId,
@@ -295,6 +357,11 @@ ${msg.from.id}`,
 
     // VIDEO
     else if (msg.video) {
+
+      await bot.sendChatAction(
+        userId,
+        'upload_video'
+      )
 
       await bot.sendVideo(
         userId,
@@ -317,10 +384,25 @@ ${msg.from.id}`,
 
     }
 
+    // VOICE
+    else if (msg.voice) {
+
+      await bot.sendChatAction(
+        userId,
+        'record_voice'
+      )
+
+      await bot.sendVoice(
+        userId,
+        msg.voice.file_id
+      )
+
+    }
+
   }
 
 })
 
 console.log(
-'BOT AKTIF 😶‍🌫️'
+'BOT ONLINE 🔥'
 )
