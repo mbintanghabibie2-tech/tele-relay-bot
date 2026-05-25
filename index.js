@@ -99,13 +99,13 @@ bot.on('message', async (msg) => {
 
 `🫂 INFO USER
 
-📝Nama:
+Nama User:
 ${msg.from.first_name}
 
-🫆Username:
+Username:
 @${msg.from.username || '-'}
 
-⚓ID:
+ID TELE:
 ${msg.from.id}`,
 
 {
@@ -188,7 +188,18 @@ ${msg.from.id}`,
 
     }
 
-  }
+    // VOICE
+    else if (msg.voice) {
+      await bot.sendVoice(
+        GROUP_ID,
+        msg.voice.file_id,
+        {
+          message_thread_id:
+          topicId
+        }
+      )
+
+    }
 
   // GROUP TOPIC → USER
   else if (
@@ -222,6 +233,14 @@ ${msg.from.id}`,
         users[id]
 
       }
+         
+       // VOICE
+      else if (msg.voice) {
+        await bot.sendVoice(
+         userId,
+         msg.voice.file_id
+       )
+      }
 
     }
 
@@ -240,6 +259,11 @@ ${msg.from.id}`,
       !msg.text.startsWith('/')
     ) {
 
+      await bot.sendChatAction(
+        userId,
+        'typing'
+      )
+
       await bot.sendMessage(
         userId,
         msg.text
@@ -252,6 +276,11 @@ ${msg.from.id}`,
 
       const photo =
       msg.photo.pop()
+
+      await bot.sendChatAction(
+       userId,
+       'upload_photo'
+      )
 
       await bot.sendPhoto(
         userId,
