@@ -50,9 +50,9 @@ bot.on('message', async (msg) => {
   const users =
   loadUsers()
 
-  // =========================
+  // =====================
   // PRIVATE → GROUP
-  // =========================
+  // =====================
 
   if (
     msg.chat.type === 'private'
@@ -69,18 +69,13 @@ bot.on('message', async (msg) => {
 
     let topicId
 
-    // BUAT TOPIC BARU
+    // bikin topic
     if (!user) {
-
-      const topicName =
-`${msg.from.first_name} | @${
-msg.from.username || 'no_username'
-}`
 
       const topic =
       await bot.createForumTopic(
         GROUP_ID,
-        topicName
+        msg.from.first_name
       )
 
       topicId =
@@ -107,19 +102,17 @@ msg.from.username || 'no_username'
 
       saveUsers(users)
 
-      // INFO USER
+      // info user
       await bot.sendMessage(
         GROUP_ID,
 
-`👤 INFORMASI USER
+`🫂 INFOR USER
 
-Nama:
+Nama User:
 ${msg.from.first_name}
-
 Username:
 @${msg.from.username || '-'}
-
-ID:
+ID User:
 ${msg.from.id}`,
 
 {
@@ -135,47 +128,9 @@ ${msg.from.id}`,
       topicId =
       user.topic_id
 
-      // RENAME TOPIC
-      const newTopicName =
-`${msg.from.first_name} | @${
-msg.from.username || 'no_username'
-}`
-
-      const oldTopicName =
-`${user.fullname} | @${
-user.username || 'no_username'
-}`
-
-      if (
-        newTopicName
-        !==
-        oldTopicName
-      ) {
-
-        await bot.editForumTopic(
-          GROUP_ID,
-          topicId,
-          {
-            name:
-            newTopicName
-          }
-        )
-
-        users[msg.from.id]
-        .fullname =
-        msg.from.first_name
-
-        users[msg.from.id]
-        .username =
-        msg.from.username || '-'
-
-        saveUsers(users)
-
-      }
-
     }
 
-    // SIMPAN LAST MESSAGE
+    // simpan message id terakhir
     users[msg.from.id]
     .last_msg_id =
     msg.message_id
@@ -263,9 +218,9 @@ user.username || 'no_username'
 
   }
 
-  // =========================
+  // =====================
   // GROUP → USER
-  // =========================
+  // =====================
 
   else if (
     msg.chat.type === 'supergroup'
@@ -310,11 +265,21 @@ user.username || 'no_username'
     const userId =
     foundUser.user_id
 
-    // AUTO TYPING
-    await bot.sendChatAction(
-      userId,
-      'typing'
-    )
+    // kalau admin reply
+    let replyOptions = {}
+
+    if (
+      msg.reply_to_message
+    ) {
+
+      replyOptions = {
+
+        reply_to_message_id:
+        foundUser.last_msg_id
+
+      }
+
+    }
 
     // TEXT
     if (
@@ -325,21 +290,13 @@ user.username || 'no_username'
       await bot.sendMessage(
         userId,
         msg.text,
-        {
-          reply_to_message_id:
-          foundUser.last_msg_id
-        }
+        replyOptions
       )
 
     }
 
     // PHOTO
     else if (msg.photo) {
-
-      await bot.sendChatAction(
-        userId,
-        'upload_photo'
-      )
 
       const photo =
       msg.photo.pop()
@@ -349,7 +306,9 @@ user.username || 'no_username'
         photo.file_id,
         {
           caption:
-          msg.caption || ''
+          msg.caption || '',
+
+          ...replyOptions
         }
       )
 
@@ -358,17 +317,14 @@ user.username || 'no_username'
     // VIDEO
     else if (msg.video) {
 
-      await bot.sendChatAction(
-        userId,
-        'upload_video'
-      )
-
       await bot.sendVideo(
         userId,
         msg.video.file_id,
         {
           caption:
-          msg.caption || ''
+          msg.caption || '',
+
+          ...replyOptions
         }
       )
 
@@ -379,7 +335,8 @@ user.username || 'no_username'
 
       await bot.sendSticker(
         userId,
-        msg.sticker.file_id
+        msg.sticker.file_id,
+        replyOptions
       )
 
     }
@@ -387,14 +344,10 @@ user.username || 'no_username'
     // VOICE
     else if (msg.voice) {
 
-      await bot.sendChatAction(
-        userId,
-        'record_voice'
-      )
-
       await bot.sendVoice(
         userId,
-        msg.voice.file_id
+        msg.voice.file_id,
+        replyOptions
       )
 
     }
