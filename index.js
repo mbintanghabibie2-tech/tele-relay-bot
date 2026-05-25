@@ -106,7 +106,7 @@ bot.on('message', async (msg) => {
       await bot.sendMessage(
         GROUP_ID,
 
-`🫂 INFOR USER
+`🫂 INFORMASI USER
 
 Nama User:
 ${msg.from.first_name}
@@ -269,7 +269,13 @@ ${msg.from.id}`,
     let replyOptions = {}
 
     if (
-      msg.reply_to_message
+
+      msg.reply_to_message &&
+
+      msg.reply_to_message.from &&
+
+      msg.reply_to_message.from.is_bot
+
     ) {
 
       replyOptions = {
