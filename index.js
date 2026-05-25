@@ -1,21 +1,30 @@
-const TelegramBot = require('node-telegram-bot-api')
+const TelegramBot =
+require('node-telegram-bot-api')
+
 const fs = require('fs')
 
-const BOT_TOKEN = process.env.BOT_TOKEN
-const GROUP_ID = process.env.GROUP_ID
+const config = require('./config')
 
-const bot = new TelegramBot(BOT_TOKEN, {
-  polling: true
-})
+const bot =
+new TelegramBot(
+  config.BOT_TOKEN,
+  { polling: true }
+)
+
+const GROUP_ID =
+config.GROUP_ID
 
 const FILE = './users.json'
 
+// buat users.json
 if (!fs.existsSync(FILE)) {
   fs.writeFileSync(FILE, '{}')
 }
 
 function loadUsers() {
-  return JSON.parse(fs.readFileSync(FILE))
+  return JSON.parse(
+    fs.readFileSync(FILE)
+  )
 }
 
 function saveUsers(data) {
@@ -25,36 +34,61 @@ function saveUsers(data) {
   )
 }
 
+// START
+bot.onText(/\/start/, async (msg) => {
+
+  bot.sendMessage(
+    msg.chat.id,
+    'iyaa, kirim pesannya ya, nanti dibales secepatnya.'
+  )
+
+})
+
+// SEMUA PESAN USER
 bot.on('message', async (msg) => {
 
-  // =========================
-  // USER → GROUP
-  // =========================
+  // PRIVATE CHAT
   if (msg.chat.type === 'private') {
+
+    // skip command
+    if (
+      msg.text &&
+      msg.text.startsWith('/')
+    ) return
 
     const users = loadUsers()
 
-    let userData =
+    let user =
       users[msg.from.id]
 
     let topicId
 
     // bikin topic baru
-    if (!userData) {
+    if (!user) {
 
       const topic =
-        await bot.createForumTopic(
-          GROUP_ID,
-          msg.from.first_name
-        )
+      await bot.createForumTopic(
+        GROUP_ID,
+        msg.from.first_name
+      )
 
       topicId =
-        topic.message_thread_id
+      topic.message_thread_id
 
       users[msg.from.id] = {
-        user_id: msg.from.id,
-        topic_id: topicId,
-        name: msg.from.first_name
+
+        user_id:
+        String(msg.from.id),
+
+        topic_id:
+        String(topicId),
+
+        fullname:
+        msg.from.first_name,
+
+        username:
+        msg.from.username || '-'
+
       }
 
       saveUsers(users)
@@ -63,53 +97,29 @@ bot.on('message', async (msg) => {
       await bot.sendMessage(
         GROUP_ID,
 
-`👤 USER BARU
+`🫂 INFORMASI USER
 
-Nama:
+Nama User:
 ${msg.from.first_name}
-
 Username:
 @${msg.from.username || '-'}
-
-ID:
+ID USER:
 ${msg.from.id}`,
 
-        {
-          message_thread_id:
-            topicId
-        }
-      )
-
-    } else {
-
-      topicId =
-        userData.topic_id
-
-      // rename topic otomatis
-      try {
-
-        await bot.editForumTopic(
-          GROUP_ID,
-          topicId,
-          {
-            name:
-              msg.from.first_name
-          }
-        )
-
-      } catch {}
+{
+  message_thread_id:
+  topicId
+}
+)
 
     }
 
-    // auto typing
-    await bot.sendChatAction(
-      GROUP_ID,
-      'typing',
-      {
-        message_thread_id:
-          topicId
-      }
-    )
+    else {
+
+      topicId =
+      user.topic_id
+
+    }
 
     // TEXT
     if (msg.text) {
@@ -119,7 +129,7 @@ ${msg.from.id}`,
         msg.text,
         {
           message_thread_id:
-            topicId
+          topicId
         }
       )
 
@@ -129,17 +139,17 @@ ${msg.from.id}`,
     else if (msg.photo) {
 
       const photo =
-        msg.photo.pop()
+      msg.photo.pop()
 
       await bot.sendPhoto(
         GROUP_ID,
         photo.file_id,
         {
-          caption:
-            msg.caption || '',
-
           message_thread_id:
-            topicId
+          topicId,
+
+          caption:
+          msg.caption || ''
         }
       )
 
@@ -152,28 +162,11 @@ ${msg.from.id}`,
         GROUP_ID,
         msg.video.file_id,
         {
-          caption:
-            msg.caption || '',
-
           message_thread_id:
-            topicId
-        }
-      )
+          topicId,
 
-    }
-
-    // VOICE NOTE
-    else if (msg.voice) {
-
-      await bot.sendVoice(
-        GROUP_ID,
-        msg.voice.file_id,
-        {
           caption:
-            msg.caption || '',
-
-          message_thread_id:
-            topicId
+          msg.caption || ''
         }
       )
 
@@ -187,7 +180,7 @@ ${msg.from.id}`,
         msg.sticker.file_id,
         {
           message_thread_id:
-            topicId
+          topicId
         }
       )
 
@@ -195,16 +188,14 @@ ${msg.from.id}`,
 
   }
 
-  // =========================
-  // GROUP → USER
-  // =========================
+  // GROUP TOPIC → USER
   else if (
-    msg.chat.type ===
-    'supergroup'
+    msg.chat.type === 'supergroup'
   ) {
 
-    if (!msg.message_thread_id)
-      return
+    if (
+      !msg.message_thread_id
+    ) return
 
     const users = loadUsers()
 
@@ -215,16 +206,18 @@ ${msg.from.id}`,
       if (
         String(
           users[id].topic_id
-        ) ===
+        )
+
+        ===
+
         String(
           msg.message_thread_id
         )
+
       ) {
 
         foundUser =
-          users[id]
-
-        break
+        users[id]
 
       }
 
@@ -233,33 +226,11 @@ ${msg.from.id}`,
     if (!foundUser) return
 
     const userId =
-      foundUser.user_id
+    foundUser.user_id
 
-    // auto typing
-    await bot.sendChatAction(
-      userId,
-      'typing'
-    )
-
-    let replyOptions = {}
-
-    // reply sync asli
-    if (
-      msg.reply_to_message &&
-      msg.reply_to_message.from &&
-      msg.reply_to_message.from.is_bot
-    ) {
-
-      try {
-
-        replyOptions.reply_to_message_id =
-          foundUser.last_msg_id
-
-      } catch {}
-
-    }
-
-    let sentMsg
+    // jangan baca bot
+    if (msg.from.is_bot)
+    return
 
     // TEXT
     if (
@@ -267,12 +238,10 @@ ${msg.from.id}`,
       !msg.text.startsWith('/')
     ) {
 
-      sentMsg =
-        await bot.sendMessage(
-          userId,
-          msg.text,
-          replyOptions
-        )
+      await bot.sendMessage(
+        userId,
+        msg.text
+      )
 
     }
 
@@ -280,76 +249,40 @@ ${msg.from.id}`,
     else if (msg.photo) {
 
       const photo =
-        msg.photo.pop()
+      msg.photo.pop()
 
-      sentMsg =
-        await bot.sendPhoto(
-          userId,
-          photo.file_id,
-          {
-            caption:
-              msg.caption || '',
-
-            ...replyOptions
-          }
-        )
+      await bot.sendPhoto(
+        userId,
+        photo.file_id,
+        {
+          caption:
+          msg.caption || ''
+        }
+      )
 
     }
 
     // VIDEO
     else if (msg.video) {
 
-      sentMsg =
-        await bot.sendVideo(
-          userId,
-          msg.video.file_id,
-          {
-            caption:
-              msg.caption || '',
-
-            ...replyOptions
-          }
-        )
-
-    }
-
-    // VOICE
-    else if (msg.voice) {
-
-      sentMsg =
-        await bot.sendVoice(
-          userId,
-          msg.voice.file_id,
-          {
-            caption:
-              msg.caption || '',
-
-            ...replyOptions
-          }
-        )
+      await bot.sendVideo(
+        userId,
+        msg.video.file_id,
+        {
+          caption:
+          msg.caption || ''
+        }
+      )
 
     }
 
     // STICKER
     else if (msg.sticker) {
 
-      sentMsg =
-        await bot.sendSticker(
-          userId,
-          msg.sticker.file_id,
-          replyOptions
-        )
-
-    }
-
-    // simpan last msg id
-    if (sentMsg) {
-
-      users[userId]
-        .last_msg_id =
-        sentMsg.message_id
-
-      saveUsers(users)
+      await bot.sendSticker(
+        userId,
+        msg.sticker.file_id
+      )
 
     }
 
@@ -357,4 +290,6 @@ ${msg.from.id}`,
 
 })
 
-console.log('Bot aktif 🔥')
+console.log(
+'BOT AKTIF YA 😶‍🌫️'
+)
