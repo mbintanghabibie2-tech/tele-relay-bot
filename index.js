@@ -269,21 +269,15 @@ ${msg.from.id}`,
     let replyOptions = {}
 
     if (
-
       msg.reply_to_message &&
-
       msg.reply_to_message.from &&
-
       msg.reply_to_message.from.is_bot
-
     ) {
 
-      replyOptions = {
-
-        reply_to_message_id:
+      replyOptions.reply_to_message_id =
         foundUser.last_msg_id
 
-      }
+    }
 
     }
 
