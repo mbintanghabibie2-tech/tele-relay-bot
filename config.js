@@ -1,4 +1,4 @@
 module.exports = {
   BOT_TOKEN: '8923995927:AAGNjgQPAtGrX8-qsPOSrMsO1i205kheThg',
   GROUP_ID: '-1003823065802'
-}
+};
