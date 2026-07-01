@@ -120,9 +120,6 @@ bot.onText(/\/start/, async (msg) => {
 // ================== BROADCAST (ADMIN ONLY) ==================
 bot.onText(/^\/broadcast(?:\s+([\s\S]+))?/, async (msg, match) => {
 
-  // cuma bisa dipanggil dari dalam grup
-  if (msg.chat.id !== GROUP_ID) return
-
   const threadOpts = msg.message_thread_id ? { message_thread_id: msg.message_thread_id } : {}
 
   // pastikan yang manggil admin/creator grup
